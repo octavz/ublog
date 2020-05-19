@@ -1,5 +1,6 @@
 import zio._
 import zio.logging.Logging.Logging
+import zio.logging._
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
@@ -11,11 +12,35 @@ import scala.concurrent.ExecutionContextExecutor
 import spray.json.DefaultJsonProtocol._
 import zio.logging.slf4j.Slf4jLogger
 import spray.json.RootJsonFormat
-import akka.http.scaladsl.model.HttpEntity
-import akka.http.scaladsl.model.ContentTypes
 import akka.http.scaladsl.model.StatusCodes
 
 object models {
+
+  val posts: List[Post] = List(
+    Post(
+      id     = "1",
+      title  = "Hello from μBlog",
+      text   = "This is a test message, it should be no longer than N characters",
+      author = "John Doe",
+      comments = List(
+        Post(
+          id     = "11",
+          title  = "Comment 1",
+          text   = "This is a comment message for post 1",
+          author = "Another John Doe",
+          comments = List(
+            Post(
+              id       = "111",
+              title    = "Comment 2",
+              text     = "This is a comment message for comment 1",
+              author   = "The pope",
+              comments = Nil
+            )
+          )
+        )
+      )
+    )
+  )
 
   case class Post(id: String, title: String, text: String, author: String, comments: List[Post])
 }
@@ -39,41 +64,46 @@ object logic {
     }
   }
 
-  def test =
-    ZLayer.succeed(new Module.Service {
-      def createPost(post: Post): Task[Unit] = Task.unit
-      def getPosts(): Task[List[Post]] =
-        Task.succeed(
-          List(
-            Post(
-              id     = "1",
-              title  = "Hello from μBlog",
-              text   = "This is a test message, it should be no longer than N characters",
-              author = "John Doe",
-              comments = List(
-                Post(
-                  id     = "11",
-                  title  = "Comment 1",
-                  text   = "This is a comment message for post 1",
-                  author = "Another John Doe",
-                  comments = List(
-                    Post(
-                      id       = "111",
-                      title    = "Comment 2",
-                      text     = "This is a comment message for comment 1",
-                      author   = "The pope",
-                      comments = Nil
-                    )
-                  )
-                )
-              )
-            )
-          )
-        )
-    })
-
   def createPost(post: Post) = ZIO.accessM[Logic](_.get.createPost(post))
   def getPosts()             = ZIO.accessM[Logic](_.get.getPosts())
+
+  def test: ZLayer[db.Db with Logging.Logging, Nothing, Logic] =
+    ZLayer.fromServices[db.Module.Service, Logging.Service, logic.Module.Service](
+      (d: db.Module.Service, l: Logging.Service) =>
+        new Module.Service {
+          def createPost(post: Post): Task[Unit] = Task.unit
+          def getPosts(): Task[List[Post]] = {
+            l.logger.log(LogLevel.Debug)("xyz") *> d.selectAll()
+          }
+        }
+    )
+}
+
+object db {
+  import models._
+  type Db = Has[Module.Service]
+
+  object Module {
+    trait Service {
+      def selectAll(): Task[List[Post]]
+      def insert(post: Post): Task[Unit]
+    }
+  }
+
+  def selectAll()        = ZIO.accessM[Db](_.get.selectAll())
+  def insert(post: Post) = ZIO.accessM[Db](_.get.insert(post))
+
+  def test: ZLayer[Logging.Logging, Nothing, Db] =
+    ZLayer.fromFunction(
+      (l: Logging.Logging) =>
+        new Module.Service {
+          override def selectAll =
+            l.get.logger.log(LogLevel.Debug)("Selecting posts") *>
+              Task.succeed(models.posts)
+
+          override def insert(post: Post) = Task.unit
+        }
+    )
 }
 
 object routes {
@@ -81,14 +111,15 @@ object routes {
   import serde._
 
   type Env = logic.Logic with Logging
-  val logger                                = Slf4jLogger.make((_, message) => message)
-  val env: ULayer[logic.Logic with Logging] = logic.test ++ logger
+  val logger: ZLayer[Any, Nothing, Logging.Logging] = Slf4jLogger.make((_, message) => message)
+  val dbL: ZLayer[Any, Nothing, db.Db] = logger >>> db.test
+  val env: ZLayer[Any, Nothing, logic.Logic]        = (logger ++ dbL) >>> logic.test
 
   def apply(runtime: zio.Runtime[Any]) =
     get {
       path("posts") {
         complete {
-          val io = logic.getPosts().provideLayer(env)
+          val io = log.debug("stuff").flatMap(_ => logic.getPosts()).provideLayer(env ++ logger)
           runtime.unsafeRunToFuture(io)
         }
       }
