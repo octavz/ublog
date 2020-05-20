@@ -69,5 +69,7 @@ val deps = Seq(
   "org.flywaydb"           % "flyway-core"            % Versions.flyway,
   "dev.zio"               %% "zio-logging-slf4j"    % Versions.zioLogging,
   "io.spray"              %% "spray-json"           % Versions.sprayJson,
-  "org.typelevel"         %% "cats-effect"          % Versions.catsEffects
+  "org.typelevel"         %% "cats-effect"          % Versions.catsEffects,
+  "ch.qos.logback"              % "logback-classic"           % "1.2.3",
+  "io.github.gaelrenoux"  %% "tranzactio"           % "0.3.0"
 ) ++ testDeps

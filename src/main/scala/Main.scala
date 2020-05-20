@@ -13,43 +13,23 @@ import spray.json.DefaultJsonProtocol._
 import zio.logging.slf4j.Slf4jLogger
 import spray.json.RootJsonFormat
 import akka.http.scaladsl.model.StatusCodes
+import zio.blocking.Blocking
+import zio.clock.Clock
+import io.github.gaelrenoux.tranzactio.doobie.Database
+import com.zaxxer.hikari.HikariDataSource
+import com.zaxxer.hikari.HikariConfig
+import models.Post
 
 object models {
 
-  val posts: List[Post] = List(
-    Post(
-      id     = "1",
-      title  = "Hello from μBlog",
-      text   = "This is a test message, it should be no longer than N characters",
-      author = "John Doe",
-      comments = List(
-        Post(
-          id     = "11",
-          title  = "Comment 1",
-          text   = "This is a comment message for post 1",
-          author = "Another John Doe",
-          comments = List(
-            Post(
-              id       = "111",
-              title    = "Comment 2",
-              text     = "This is a comment message for comment 1",
-              author   = "The pope",
-              comments = Nil
-            )
-          )
-        )
-      )
-    )
-  )
-
-  case class Post(id: String, title: String, text: String, author: String, comments: List[Post])
+  case class Post(id: String, title: String, content: String, author: String)
 }
 
 object serde {
   import models._
 
   implicit val postFmt: RootJsonFormat[Post] = rootFormat(
-    lazyFormat(jsonFormat(Post, "id", "title", "text", "author", "comments"))
+    lazyFormat(jsonFormat(Post, "id", "title", "content", "author"))
   )
 }
 
@@ -71,7 +51,7 @@ object logic {
     ZLayer.fromServices[db.Module.Service, Logging.Service, logic.Module.Service](
       (d: db.Module.Service, l: Logging.Service) =>
         new Module.Service {
-          def createPost(post: Post): Task[Unit] = Task.unit
+          def createPost(post: Post): Task[Unit] = d.insert(post).as(())
           def getPosts(): Task[List[Post]] = {
             l.logger.log(LogLevel.Debug)("xyz") *> d.selectAll()
           }
@@ -80,30 +60,57 @@ object logic {
 }
 
 object db {
+  import zio.ZIO
   import models._
+  import doobie.implicits._
+  import io.github.gaelrenoux.tranzactio._
+  import io.github.gaelrenoux.tranzactio.doobie._
+  import io.github.gaelrenoux.tranzactio.doobie.Database
+
   type Db = Has[Module.Service]
 
   object Module {
     trait Service {
       def selectAll(): Task[List[Post]]
-      def insert(post: Post): Task[Unit]
+      def insert(post: Post): ZIO[Any, Throwable, Int]
     }
   }
 
   def selectAll()        = ZIO.accessM[Db](_.get.selectAll())
   def insert(post: Post) = ZIO.accessM[Db](_.get.insert(post))
 
-  def test: ZLayer[Logging.Logging, Nothing, Db] =
+  def insertSql(post: Post) = tzio {
+    sql"INSERT INTO post(id, title, content, author) VALUES (${post.id}, ${post.title}, ${post.content}, ${post.author})".update.run
+  }
+
+  def selectAllSql() = tzio {
+    sql"select id, title, content, author from post".query[Post].to[List]
+  }
+
+  def test: ZLayer[Logging.Logging with Database, Nothing, Db] =
     ZLayer.fromFunction(
-      (l: Logging.Logging) =>
+      (l: Logging.Logging with Database) =>
         new Module.Service {
           override def selectAll =
-            l.get.logger.log(LogLevel.Debug)("Selecting posts") *>
-              Task.succeed(models.posts)
+            l.get[Logging.Service].logger.log(LogLevel.Debug)("Selecting posts") *>
+              l.get[Database.Service].transactionOrWiden(selectAllSql())
 
-          override def insert(post: Post) = Task.unit
+          override def insert(post: Post) =
+            l.get[Database.Service].transactionOrWiden(insertSql(post))
         }
     )
+}
+
+object Transaction {
+
+  val config = new HikariConfig()
+  config.setJdbcUrl("jdbc:postgresql://localhost:5432/postgres")
+  config.setUsername("postgres")
+  config.setPassword("postgres")
+  val datasource: javax.sql.DataSource = new HikariDataSource(config)
+
+  val dbLayer: ZLayer[Blocking with Clock, Nothing, Database] = Database.fromDatasource(datasource)
+
 }
 
 object routes {
@@ -112,7 +119,7 @@ object routes {
 
   type Env = logic.Logic with Logging
   val logger: ZLayer[Any, Nothing, Logging.Logging] = Slf4jLogger.make((_, message) => message)
-  val dbL: ZLayer[Any, Nothing, db.Db] = logger >>> db.test
+  val dbL: ZLayer[Any, Nothing, db.Db]              = (((Blocking.live ++ Clock.live) >>> Transaction.dbLayer) ++ logger) >>> db.test
   val env: ZLayer[Any, Nothing, logic.Logic]        = (logger ++ dbL) >>> logic.test
 
   def apply(runtime: zio.Runtime[Any]) =
@@ -140,7 +147,8 @@ object routes {
 object Main extends App {
 
   override def run(args: List[String]): ZIO[ZEnv, Nothing, Int] = {
-    Managed
+    val ioMigrate = migration.migrateInternal("public").provideLayer(routes.logger)
+    val ioAkka = Managed
       .make(Task(ActorSystem("main-akka-http")))(sys => Task.fromFuture(_ => sys.terminate()).ignore)
       .use { actorSystem =>
         implicit val system: ActorSystem                        = actorSystem
@@ -148,6 +156,6 @@ object Main extends App {
         implicit val executionContext: ExecutionContextExecutor = system.dispatcher
         ZIO.fromFuture(_ => Http().bindAndHandle(routes(this), "0.0.0.0", 8080)) *> ZIO.never
       }
-      .fold(_ => 1, _ => 0)
+    (ioMigrate *> ioAkka).fold(_ => 1, _ => 0)
   }
 }

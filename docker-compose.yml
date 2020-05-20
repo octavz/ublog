@@ -1,0 +1,13 @@
+# Note that you might have to increase the memory footprint of the docker-machine in order to run these containers
+# docker-machine stop
+# VBoxManage modifyvm default --cpus 2
+# VBoxManage modifyvm default --memory 4096
+# docker-machine start
+version: '2'
+services:
+  postgres:
+    image: postgres:11.7
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_PASSWORD=postgres
