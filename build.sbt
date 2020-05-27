@@ -71,5 +71,6 @@ val deps = Seq(
   "io.spray"              %% "spray-json"           % Versions.sprayJson,
   "org.typelevel"         %% "cats-effect"          % Versions.catsEffects,
   "ch.qos.logback"              % "logback-classic"           % "1.2.3",
-  "io.github.gaelrenoux"  %% "tranzactio"           % "0.3.0"
+  "io.github.gaelrenoux"  %% "tranzactio"           % "0.3.0",
+  "dev.profunktor"        %% "redis4cats-effects"   % "0.10.0"
 ) ++ testDeps
