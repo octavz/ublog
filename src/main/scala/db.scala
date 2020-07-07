@@ -35,7 +35,7 @@ object db {
     sql"select id, title, content, author from post where id = $id".query[Post].option
   }
 
-  def test: ZLayer[Logging.Logging with Database with cache.Cache, Nothing, Db] =
+  def live: ZLayer[Logging.Logging with Database with cache.Cache, Nothing, Db] =
     ZLayer.fromFunction(
       (l: Logging.Logging with Database with cache.Cache) =>
         new Db.Service {

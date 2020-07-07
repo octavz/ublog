@@ -52,7 +52,8 @@ val testDeps = Seq(
   "dev.zio"      %% "zio-test"                        % Versions.zio            % "test,it",
   "dev.zio"      %% "zio-test-magnolia"               % Versions.zio            % "test,it",
   "com.dimafeng" %% "testcontainers-scala"            % Versions.testcontainers % "test,it",
-  "com.dimafeng" %% "testcontainers-scala-postgresql" % Versions.testcontainers % "test,it"
+  "com.dimafeng" %% "testcontainers-scala-postgresql" % Versions.testcontainers % "test,it",
+  "ch.qos.logback"              % "logback-classic"           % "1.2.3"
 )
 
 val deps = Seq(
