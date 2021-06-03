@@ -1,11 +1,11 @@
 import zio._
-import zio.logging.Logging
-import zio.logging.LogLevel
-import models.Post
+import zio.logging._
 import doobie.implicits._
 import io.github.gaelrenoux.tranzactio.doobie._
 import io.github.gaelrenoux.tranzactio.doobie.Database
+
 import cache._
+import models.Post
 
 object db {
 
@@ -35,19 +35,20 @@ object db {
     sql"select id, title, content, author from post where id = $id".query[Post].option
   }
 
-  def live: ZLayer[Logging.Logging with Database with cache.Cache, Nothing, Db] =
+  def live: ZLayer[Logging with Database with cache.Cache, Nothing, Db] =
     ZLayer.fromFunction(
-      (l: Logging.Logging with Database with cache.Cache) =>
+      (l: Logging with Database with cache.Cache) =>
         new Db.Service {
           val myCache = l.get[Cache.Service]
           val db      = l.get[Database.Service]
+          val logger  = l.get[Logger[String]]
 
-          override def selectAll =
-            l.get[Logging.Service].logger.log(LogLevel.Debug)("Selecting posts") *>
-              l.get[Database.Service].transactionOrWiden(selectAllSql())
+          override def selectAll() =
+            logger.log(LogLevel.Debug)("Selecting posts") *>
+              db.transactionOrWiden(selectAllSql())
 
           override def insert(post: Post) =
-            l.get[Database.Service].transactionOrWiden(insertSql(post))
+            db.transactionOrWiden(insertSql(post))
 
           override def getById(id: String) =
             for {

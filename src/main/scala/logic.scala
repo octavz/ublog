@@ -1,9 +1,8 @@
 import zio._
 import zio.Task
-import zio.logging.Logging
+import zio.logging._
+
 import models.Post
-import zio.logging.LogLevel
-import models._
 
 object logic {
   type Logic = Has[Logic.Service]
@@ -20,16 +19,16 @@ object logic {
   def getPosts()              = ZIO.accessM[Logic](_.get.getPosts())
   def getPostById(id: String) = ZIO.accessM[Logic](_.get.getPostById(id))
 
-  def live: ZLayer[db.Db with Logging.Logging, Nothing, Logic] =
-    ZLayer.fromServices[db.Db.Service, Logging.Service, logic.Logic.Service](
-      (d: db.Db.Service, l: Logging.Service) =>
+  def live: ZLayer[db.Db with Logging, Nothing, Logic] =
+    ZLayer.fromServices[db.Db.Service, Logger[String], logic.Logic.Service](
+      (d: db.Db.Service, l: Logger[String]) =>
         new Logic.Service {
-          def createPost(post: Post): Task[Unit] = d.insert(post).as(())
+          def createPost(post: Post): Task[Unit] = d.insert(post).unit
           def getPosts(): Task[List[Post]] = {
-            l.logger.log(LogLevel.Debug)("xyz") *> d.selectAll()
+            l.log(LogLevel.Debug)("xyz") *> d.selectAll()
           }
           def getPostById(id: String): Task[Option[Post]] = {
-            l.logger.log(LogLevel.Debug)("abc") *> d.getById(id)
+            l.log(LogLevel.Debug)("abc") *> d.getById(id)
           }
         }
     )

@@ -1,18 +1,33 @@
-import zio.ZLayer
-import com.zaxxer.hikari.HikariConfig
+import zio._
 import zio.blocking.Blocking
-import com.zaxxer.hikari.HikariDataSource
 import zio.clock.Clock
+import zio.duration.durationInt
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
+import io.github.gaelrenoux.tranzactio._
 import io.github.gaelrenoux.tranzactio.doobie.Database
+
+import javax.sql.DataSource
 
 object transaction {
 
-  val config = new HikariConfig()
-  config.setJdbcUrl("jdbc:postgresql://localhost:5432/postgres")
-  config.setUsername("postgres")
-  config.setPassword("postgres")
-  val datasource: javax.sql.DataSource = new HikariDataSource(config)
+  val connectionPoolLayer: ZLayer[Blocking, Throwable, Has[DataSource]] =
+    ZIO
+      .accessM[Blocking] { _ =>
+        blocking.effectBlocking {
+          val config = new HikariConfig()
+          config.setJdbcUrl("jdbc:postgresql://localhost:5432/postgres")
+          config.setUsername("postgres")
+          config.setPassword("postgres")
+          new HikariDataSource(config)
+        }
+      }
+      .toLayer
 
-  val dbLayer: ZLayer[Blocking with Clock, Nothing, Database] = Database.fromDatasource(datasource)
+  val errorStrategiesLayer: ULayer[Has[ErrorStrategies]] =
+    ZLayer.succeed(ErrorStrategies.timeout(10.seconds).retryCountFixed(3, 3.seconds))
+
+  val dbLayer = (Blocking.live >>> connectionPoolLayer ++ errorStrategiesLayer ++ Clock.live ++ Blocking.live) >>>
+    Database.fromDatasourceAndErrorStrategies
 
 }

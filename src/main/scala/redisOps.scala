@@ -1,8 +1,8 @@
 import zio._
-import dev.profunktor.redis4cats.effect.Log
-import dev.profunktor.redis4cats.RedisCommands
 import zio.interop.catz._
 import zio.logging._
+import dev.profunktor.redis4cats.effect.Log
+import dev.profunktor.redis4cats.RedisCommands
 import dev.profunktor.redis4cats.Redis
 
 object redisOps {

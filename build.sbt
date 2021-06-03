@@ -1,23 +1,21 @@
 lazy val Versions = new {
-  val kindProjector    = "0.11.0"
-  val scalamacros      = "2.1.1"
-  val zio              = "1.0.0-RC18-2"
-  val zioInteropCats   = "2.0.0.0-RC12"
-  val doobie           = "0.8.8"
-  val pureconfig       = "0.12.3"
-  val flyway           = "6.3.1"
-  val testcontainers   = "0.36.1"
-  val catsEffects      = "2.1.1"
+  val zio              = "1.0.8"
+  val zioInteropCats   = "2.5.1.0"
+  val doobie           = "0.13.4"
+  val pureconfig       = "0.15.0"
+  val flyway           = "7.9.1"
+  val testcontainers   = "0.39.5"
+  val catsEffects      = "2.5.1"
   val betterMonadicFor = "0.3.1"
-  val zioLogging       = "0.2.5"
-  val akkaHttp         = "10.1.11"
-  val akkaStream       = "2.5.26"
-  val sprayJson        = "1.3.5"
+  val zioLogging       = "0.5.10"
+  val akkaHttp         = "10.2.4"
+  val akkaStream       = "2.6.14"
+  val sprayJson        = "1.3.6"
 }
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
-ThisBuild / scalaVersion      := "2.13.1"
+ThisBuild / scalaVersion      := "2.13.6"
 ThisBuild / organization      := "org.github"
 ThisBuild / scalafmtOnCompile := true
 ThisBuild / turbo             := false
@@ -72,6 +70,6 @@ val deps = Seq(
   "io.spray"              %% "spray-json"           % Versions.sprayJson,
   "org.typelevel"         %% "cats-effect"          % Versions.catsEffects,
   "ch.qos.logback"              % "logback-classic"           % "1.2.3",
-  "io.github.gaelrenoux"  %% "tranzactio"           % "0.3.0",
-  "dev.profunktor"        %% "redis4cats-effects"   % "0.10.0"
+  "io.github.gaelrenoux"  %% "tranzactio"           % "2.0.0",
+  "dev.profunktor"        %% "redis4cats-effects"   % "0.13.1"
 ) ++ testDeps

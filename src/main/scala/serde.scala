@@ -1,5 +1,6 @@
 import spray.json._
 import spray.json.DefaultJsonProtocol._
+
 import models._
 
 object serde {

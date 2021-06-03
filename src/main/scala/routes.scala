@@ -1,14 +1,13 @@
 import zio.logging.Logging
-import models._
-import serde._
-import layers._
-import zio.logging.Logging.Logging
-import akka.http.scaladsl.server.Directives._
 import zio.logging.log
+import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
 import spray.json.DefaultJsonProtocol._
-import zio.Schedule
+
+import layers._
+import models._
+import serde._
 
 object routes {
 
@@ -18,7 +17,7 @@ object routes {
     get {
       path("posts") {
         complete {
-          val io = log.debug("stuff").flatMap(_ => logic.getPosts()).provideLayer(env ++ logger)
+          val io = (log.debug("stuff") *> logic.getPosts()).provideLayer(env ++ logger)
           runtime.unsafeRunToFuture(io)
         }
       }

@@ -1,4 +1,3 @@
-import zio.{Has, ZLayer, RIO}
 import zio._
 
 object config {

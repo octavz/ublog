@@ -1,14 +1,12 @@
+import zio._
 import zio.test._
-import zio.test.TestAspect._
-import zio.{ZLayer, ZIO, Task}
 import zio.test.Assertion._
-import zio.logging._
-import models._
 import serde._
 import spray.json._
 
-import logic._
 import db._
+import logic._
+import models._
 
 object spec extends DefaultRunnableSpec {
 
@@ -35,7 +33,7 @@ object spec extends DefaultRunnableSpec {
 
           assert(postJson)(equalTo(expected))
         },
-        testM("succesful serialization with gen") {
+        testM("successful serialization with gen") {
           check(postGen) { post =>
             val postJson = post.toJson
             val expected =
@@ -54,7 +52,7 @@ object spec extends DefaultRunnableSpec {
           val testDbL = ZLayer.succeed(new Db.Service {
             def selectAll(): Task[List[Post]]                = Task.succeed(Nil)
             def insert(post: Post): ZIO[Any, Throwable, Int] = Task.succeed(1)
-            def getById(id: String): Task[Option[Post]]      = Task.succeed(Some(expected))
+            def getById(id: String): Task[Option[Post]]      = Task.some(expected)
           })
           val liveLogic: ZLayer[Any, Nothing, Logic] = (testDbL ++ layers.logger) >>> logic.live
           val result                                 = getPostById("id").provideLayer(liveLogic)

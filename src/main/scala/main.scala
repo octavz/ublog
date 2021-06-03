@@ -1,23 +1,21 @@
 import zio._
-
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.stream.ActorMaterializer
+import org.flywaydb.core.api.output.MigrateResult
 
 import scala.concurrent.ExecutionContextExecutor
 
-object Main extends App {
+object main extends App {
 
-  override def run(args: List[String]): ZIO[ZEnv, Nothing, Int] = {
-    val ioMigrate = migration.migrateInternal("public").provideLayer(layers.logger)
-    val ioAkka = Managed
+  override def run(args: List[String]) = {
+    val ioMigrate: ZIO[Any, Throwable, MigrateResult] = migration.migrateInternal("public").provideLayer(layers.logger)
+    val ioAkka: ZIO[Any, Throwable, Nothing] = Managed
       .make(Task(ActorSystem("main-akka-http")))(sys => Task.fromFuture(_ => sys.terminate()).ignore)
       .use { actorSystem =>
         implicit val system: ActorSystem                        = actorSystem
-        implicit val materializer: ActorMaterializer            = ActorMaterializer()
         implicit val executionContext: ExecutionContextExecutor = system.dispatcher
-        ZIO.fromFuture(_ => Http().bindAndHandle(routes(this), "0.0.0.0", 8080)) *> ZIO.never
+        ZIO.fromFuture(_ => Http().newServerAt("0.0.0.0", 8080).bind(routes(this))) *> ZIO.never
       }
-    (ioMigrate *> ioAkka).fold(_ => 1, _ => 0)
+    (ioMigrate *> ioAkka).orDie
   }
 }
