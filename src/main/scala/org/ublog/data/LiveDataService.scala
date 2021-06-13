@@ -15,7 +15,7 @@ trait LiveDataService extends Data.Service {
   override def selectAll() =
     logger.debug("Selecting posts") *> persistenceService.getAllPosts().map(_.map(models.fromDb))
 
-  override def insert(post: Post) = persistenceService.insertPost(post.toDb())
+  override def insert(post: Post) = persistenceService.insertPost(post.toDb)
 
   override def getById(id: String) =
     for {

@@ -21,7 +21,9 @@ object RedisOps {
   def get(id: String): RIO[RedisOps, Option[String]]     = ZIO.accessM[RedisOps](_.get.get(id))
 
   // implementations
-  val live: ZLayer[RedisCmds, Nothing, RedisOps] =
+  val live: ZLayer[Config, Nothing, RedisOps] = redisCmdsLive >>> redisLive
+
+  private def redisLive: ZLayer[RedisCmds, Nothing, RedisOps] =
     ZLayer.fromFunction { (env: RedisCmds) =>
       new Service {
         override def get(id: String): Task[Option[String]]     = env.get.get(id)
@@ -29,7 +31,7 @@ object RedisOps {
       }
     }
 
-  val redisCmdsLive: ZLayer[Config, Nothing, RedisCmds] =
+  private def redisCmdsLive: ZLayer[Config, Nothing, RedisCmds] =
     ZLayer.fromManaged(Config.redisUri.toManaged_.flatMap(u => Redis[Task].utf8(u).toManagedZIO).orDie)
 
   implicit val zioLog: Log[Task] = new Log[Task] {

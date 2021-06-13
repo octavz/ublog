@@ -19,8 +19,8 @@ object layers {
   def migrationLayer: ZLayer[Any, Nothing, Logging with Blocking with Config] =
     loggerLayer ++ Blocking.live ++ Config.live
 
-  def cacheLayer: ZLayer[Any, Nothing, cache.Cache] =
-    Config.live >>> RedisOps.redisCmdsLive >>> RedisOps.live >>> Cache.live
+  def cacheLayer: ZLayer[Any, Nothing, Cache] =
+    Config.live >>> RedisOps.live >>> Cache.live
 
   def persistenceLayer: ZLayer[Any, PersistenceException, Persistence] =
     (loggerLayer ++ Blocking.live ++ Clock.live ++ Config.live) >>> Persistence.live
@@ -28,7 +28,7 @@ object layers {
   def dataLayer: ZLayer[Any, PersistenceException, Data] =
     (loggerLayer ++ persistenceLayer ++ cacheLayer) >>> Data.live
 
-  def applicationLayer: ZLayer[Any, Throwable, logic.Logic] =
+  def applicationLayer: ZLayer[Any, Throwable, Logic] =
     (loggerLayer ++ dataLayer) >>> Logic.live
 
 }

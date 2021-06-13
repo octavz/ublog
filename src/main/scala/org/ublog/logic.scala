@@ -26,13 +26,9 @@ object logic {
       ZLayer.fromServices[Data.Service, Logger[String], logic.Logic.Service](
         (d: Data.Service, l: Logger[String]) =>
           new Logic.Service {
-            def createPost(post: Post): Task[Unit] = d.insert(post).unit
-            def getPosts(): Task[List[Post]] = {
-              l.log(LogLevel.Debug)("xyz") *> d.selectAll()
-            }
-            def getPostById(id: String): Task[Option[Post]] = {
-              l.log(LogLevel.Debug)("abc") *> d.getById(id)
-            }
+            def createPost(post: Post): Task[Unit]          = l.debug("creating post") *> d.insert(post).unit
+            def getPosts(): Task[List[Post]]                = l.debug("Selecting posts") *> d.selectAll()
+            def getPostById(id: String): Task[Option[Post]] = l.debug(s"Selecting post for id $id") *> d.getById(id)
           }
       )
   }

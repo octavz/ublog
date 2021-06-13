@@ -1,10 +1,9 @@
 package org.ublog
 
-import org.ublog.config.Config
-import org.ublog.persistence.models.DbPost
-import org.ublog.persistence.models.PersistenceException
 import com.zaxxer.hikari._
 import io.github.gaelrenoux.tranzactio.doobie
+import org.ublog.config.Config
+import org.ublog.persistence.models._
 import zio._
 import zio.blocking.Blocking
 import zio.clock.Clock
