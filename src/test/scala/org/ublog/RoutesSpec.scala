@@ -9,7 +9,7 @@ import zio._
 import zio.test.Assertion._
 import zio.test._
 
-object spec extends DefaultRunnableSpec {
+object RoutesSpec extends DefaultRunnableSpec {
 
   val postGen = for {
     id      <- Gen.anyString
@@ -50,12 +50,12 @@ object spec extends DefaultRunnableSpec {
         },
         testM("getPostById") {
           val expected = Post("id", "title", "content", "author")
-          val testDbL = ZLayer.succeed(new Data.Service {
+          val testDataServiceLayer = ZLayer.succeed(new Data.Service {
             def selectAll(): Task[List[Post]]                 = Task.succeed(Nil)
             def insert(post: Post): ZIO[Any, Throwable, Unit] = Task.unit
             def getById(id: String): Task[Option[Post]]       = Task.some(expected)
           })
-          val liveLogic: ZLayer[Any, Nothing, Logic] = (testDbL ++ layers.loggerLayer) >>> Logic.live
+          val liveLogic: ZLayer[Any, Nothing, Logic] = (testDataServiceLayer ++ layers.loggerLayer) >>> Logic.live
           val result                                 = Logic.getPostById("id").provideLayer(liveLogic)
           assertM(result)(equalTo(Some(expected)))
         }
