@@ -1,12 +1,13 @@
-import zio._
-import zio.test._
-import zio.test.Assertion._
-import serde._
-import spray.json._
+package org.ublog
 
-import db._
-import logic._
-import models._
+import org.ublog.data.Data
+import org.ublog.logic.Logic
+import org.ublog.models.Post
+import org.ublog.serde._
+import spray.json._
+import zio._
+import zio.test.Assertion._
+import zio.test._
 
 object spec extends DefaultRunnableSpec {
 
@@ -49,13 +50,13 @@ object spec extends DefaultRunnableSpec {
         },
         testM("getPostById") {
           val expected = Post("id", "title", "content", "author")
-          val testDbL = ZLayer.succeed(new Db.Service {
-            def selectAll(): Task[List[Post]]                = Task.succeed(Nil)
-            def insert(post: Post): ZIO[Any, Throwable, Int] = Task.succeed(1)
-            def getById(id: String): Task[Option[Post]]      = Task.some(expected)
+          val testDbL = ZLayer.succeed(new Data.Service {
+            def selectAll(): Task[List[Post]]                 = Task.succeed(Nil)
+            def insert(post: Post): ZIO[Any, Throwable, Unit] = Task.unit
+            def getById(id: String): Task[Option[Post]]       = Task.some(expected)
           })
-          val liveLogic: ZLayer[Any, Nothing, Logic] = (testDbL ++ layers.logger) >>> logic.live
-          val result                                 = getPostById("id").provideLayer(liveLogic)
+          val liveLogic: ZLayer[Any, Nothing, Logic] = (testDbL ++ layers.loggerLayer) >>> Logic.live
+          val result                                 = Logic.getPostById("id").provideLayer(liveLogic)
           assertM(result)(equalTo(Some(expected)))
         }
       )
