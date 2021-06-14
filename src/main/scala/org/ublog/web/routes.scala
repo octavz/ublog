@@ -1,24 +1,24 @@
-import zio.logging.Logging
-import models._
-import serde._
-import layers._
-import zio.logging.Logging.Logging
-import akka.http.scaladsl.server.Directives._
-import zio.logging.log
-import akka.http.scaladsl.model.StatusCodes
+package org.ublog.web
+
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport._
+import akka.http.scaladsl.model.StatusCodes
+import akka.http.scaladsl.server.Directives._
+import org.ublog.layers._
+import org.ublog.logic.Logic
+import org.ublog.models.Post
+import org.ublog.serde._
 import spray.json.DefaultJsonProtocol._
-import zio.Schedule
+import zio.logging._
 
 object routes {
 
-  type Env = logic.Logic with Logging
+  type Env = Logic with Logging
 
   def apply(runtime: zio.Runtime[Any]) =
     get {
       path("posts") {
         complete {
-          val io = log.debug("stuff").flatMap(_ => logic.getPosts()).provideLayer(env ++ logger)
+          val io = (log.debug("stuff") *> Logic.getPosts()).provideLayer(applicationLayer ++ loggerLayer)
           runtime.unsafeRunToFuture(io)
         }
       }
@@ -27,7 +27,7 @@ object routes {
         path("post") {
           entity(as[Post]) { post =>
             complete {
-              val io = logic.createPost(post).provideLayer(env)
+              val io = Logic.createPost(post).provideLayer(applicationLayer)
               val r  = io.fold(_ => StatusCodes.InternalServerError, _ => StatusCodes.Created)
               runtime.unsafeRunToFuture(r)
             }
@@ -37,7 +37,7 @@ object routes {
       get {
         path("post" / Segment) { id =>
           complete {
-            val io = logic.getPostById(id).provideLayer(env)
+            val io = Logic.getPostById(id).provideLayer(applicationLayer)
             runtime.unsafeRunToFuture(io)
           }
         }
