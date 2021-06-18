@@ -12,6 +12,7 @@ lazy val Versions = new {
   val akkaStream       = "2.6.15"
   val sprayJson        = "1.3.6"
   val chimney          = "0.6.1"
+  val kamon            = "2.2.0"
 }
 
 Global / onChangedBuildSource := ReloadOnSourceChanges
@@ -73,5 +74,7 @@ val deps = Seq(
   "io.scalaland"          %% "chimney"              % Versions.chimney,
   "ch.qos.logback"        % "logback-classic"       % "1.2.3",
   "io.github.gaelrenoux"  %% "tranzactio"           % "2.0.0",
-  "dev.profunktor"        %% "redis4cats-effects"   % "0.13.1"
+  "dev.profunktor"        %% "redis4cats-effects"   % "0.13.1",
+  "io.kamon"              %% "kamon-bundle"         % Versions.kamon,
+  "io.kamon"              %% "kamon-prometheus"     % Versions.kamon
 ) ++ testDeps
