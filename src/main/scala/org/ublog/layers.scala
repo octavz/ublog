@@ -3,10 +3,11 @@ package org.ublog
 import org.ublog.cache._
 import org.ublog.config.Config
 import org.ublog.data.Data
-import org.ublog.logic.Logic
+import org.ublog.logic._
+import org.ublog.metrics.MetricsLive
 import org.ublog.persistence.Persistence
 import org.ublog.persistence.models.PersistenceException
-import zio.ZLayer
+import zio._
 import zio.blocking.Blocking
 import zio.clock.Clock
 import zio.logging.Logging
@@ -28,7 +29,7 @@ object layers {
   def dataLayer: ZLayer[Any, PersistenceException, Data] =
     (loggerLayer ++ persistenceLayer ++ cacheLayer) >>> Data.live
 
-  def applicationLayer: ZLayer[Any, Throwable, Logic] =
-    (loggerLayer ++ dataLayer) >>> Logic.live
+  def applicationLayer: ZLayer[Any, Throwable, Has[Logic]] =
+    (loggerLayer ++ dataLayer ++ MetricsLive.layer) >>> LogicLive.layer
 
 }
