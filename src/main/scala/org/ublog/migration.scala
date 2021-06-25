@@ -9,7 +9,7 @@ import zio.logging.Logging
 
 object migration {
 
-  def migrateInternal(): ZIO[Blocking with Logging with Config, Throwable, MigrateResult] =
+  def migrateInternal(): ZIO[Blocking with Logging with Has[Config], Throwable, MigrateResult] =
     for {
       config <- Config.storeConfig
       _      <- Logging.info(s"Migrating database, for schema: ${config.schema} with url: ${config.url}")

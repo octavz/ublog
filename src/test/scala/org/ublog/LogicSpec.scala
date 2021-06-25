@@ -30,7 +30,7 @@ object LogicSpec extends DefaultRunnableSpec {
         testM("Get post by id") {
 
           val expected = Post("id", "title", "content", "author")
-          val testDataServiceLayer = ZLayer.succeed(new Data.Service {
+          val testDataServiceLayer = ZLayer.succeed(new Data {
             def selectAll(): Task[List[Post]]                 = Task.succeed(Nil)
             def insert(post: Post): ZIO[Any, Throwable, Unit] = Task.unit
             def getById(id: String): Task[Option[Post]]       = Task.some(expected)
