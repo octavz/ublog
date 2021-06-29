@@ -22,7 +22,7 @@ object logic {
     def getPostById(id: String): ZIO[Has[Logic], Throwable, Option[Post]] = ZIO.serviceWith[Logic](_.getPostById(id))
   }
 
-  case class LogicLive(d: Data.Service, l: Logger[String], m: Metrics) extends Logic {
+  case class LogicLive(d: Data, l: Logger[String], m: Metrics) extends Logic {
     def createPost(post: Post): Task[Unit] =
       l.debug("creating post") *> d.insert(post).unit *> m.incrementCreatedPosts()
     def getPosts(): Task[List[Post]]                = l.debug("Selecting posts") *> d.selectAll()
@@ -30,7 +30,7 @@ object logic {
   }
 
   object LogicLive {
-    val layer: ZLayer[Has[Data.Service] with Has[Logger[String]] with Has[Metrics], Nothing, Has[Logic]] =
+    val layer: ZLayer[Has[Data] with Has[Logger[String]] with Has[Metrics], Nothing, Has[Logic]] =
       (LogicLive(_, _, _)).toLayer
   }
 }
