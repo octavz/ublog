@@ -1,23 +1,18 @@
 package org.ublog
 
-import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
 import kamon.Kamon
-import org.flywaydb.core.api.output.MigrateResult
-import org.ublog.web.routes
+import org.ublog.web._
 import zio._
 
 object main extends App {
 
-  override def run(args: List[String]) = {
-    val ioKamon                                       = ZIO(Kamon.init())
-    val ioMigrate: ZIO[Any, Throwable, MigrateResult] = migration.migrateInternal().provideLayer(layers.migrationLayer)
-    val ioAkka: ZIO[Any, Throwable, Nothing] = Managed
-      .make(Task(ActorSystem("main-akka-http")))(sys => Task.fromFuture(_ => sys.terminate()).ignore)
-      .use { actorSystem =>
-        implicit val system: ActorSystem = actorSystem
-        ZIO.fromFuture(_ => Http().newServerAt("0.0.0.0", 8080).bind(routes(this))) *> ZIO.never
-      }
-    (ioKamon *> ioMigrate *> ioAkka).orDie
+  override def run(args: List[String]): URIO[ZEnv, ExitCode] = {
+    val ioKamon   = ZIO(Kamon.init())
+    val ioMigrate = migration.migrateInternal().provideLayer(layers.migrationLayer)
+//    val ioZioHttp = Web.startServer().provideLayer(layers.zioHttpLayer)
+//    (ioKamon *> ioMigrate *> ioZioHttp).exitCode
+
+    val ioAkka = Web.startServer().provideLayer(layers.akkaWebLayer(this))
+    (ioKamon *> ioMigrate *> ioAkka).exitCode
   }
 }

@@ -7,6 +7,7 @@ import org.ublog.logic._
 import org.ublog.metrics.MetricsLive
 import org.ublog.persistence._
 import org.ublog.persistence.models.PersistenceException
+import org.ublog.web.{AkkaWebLive, Web, ZioHttpWebLive}
 import zio._
 import zio.blocking.Blocking
 import zio.clock.Clock
@@ -30,5 +31,10 @@ object layers {
 
   def applicationLayer: ZLayer[Any, Throwable, Has[Logic]] =
     (loggerLayer ++ dataLayer ++ MetricsLive.layer) >>> LogicLive.layer
+
+  def akkaWebLayer(runtime: zio.Runtime[Any]): ZLayer[Any, Throwable, Has[Web]] =
+    (applicationLayer ++ loggerLayer) >>> AkkaWebLive.layer(runtime)
+
+  def zioHttpLayer: ZLayer[Any, Throwable, Has[Web]] = (applicationLayer ++ loggerLayer) >>> ZioHttpWebLive.layer
 
 }
